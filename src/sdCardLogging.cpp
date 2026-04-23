@@ -43,7 +43,7 @@ bool sdlog_init(void)
 /* ------------------------------------------------------------
    Append one row + CRC and verify by reading last line
 ------------------------------------------------------------ */
-bool sdlog_append(int rssi, int rsrp, int rsrq, int sinr, double lat, double lng, int batVoltage, const char* utcTime, const char* device_id ){
+bool sdlog_append(int rssi, int rsrp, int rsrq, int sinr, double lat, double lng, int batVoltage, const char* utcTime, const char* device_id, bool GPSValid){
   if (!sd_mounted) {
     Serial.println("ERROR: SD CARD NOT MOUNTED");
     return false;
@@ -73,10 +73,40 @@ bool sdlog_append(int rssi, int rsrp, int rsrq, int sinr, double lat, double lng
     Serial.println("ERROR: Failed to open CSV for append");
     return false;
   } 
-  char row[256];                                                                                                                                     
-  snprintf(row, sizeof(row), "%s,%s,%d,%d,%d,%d,%.6f,%.6f,%d", device_id, utcTime, rssi, rsrp, rsrq, sinr, lat, lng, batVoltage);
+  char row[256];
+  if(GPSValid){
+    snprintf(row, sizeof(row), "%s,%s,%d,%d,%d,%d,%.6f,%.6f,%d",
+             device_id, utcTime, rssi, rsrp, rsrq, sinr, lat, lng, batVoltage);
+  } else {
+    snprintf(row, sizeof(row), "%s,%s,%d,%d,%d,%d,,,%d",
+              device_id, utcTime, rssi, rsrp, rsrq, sinr, batVoltage);
+  }
   f.println(row);
   f.close();
 
   return true;
+}
+
+// A function that check whether the prev day's file exist
+bool checkPrevFile(const char* utcTime){
+  // Convert time to date
+  char utcDate[7];                                                                                                                                     
+  strncpy(utcDate, utcTime, 6);                                                                                                                        
+  utcDate[6] = '\0';
+
+  // Extract month, day, year
+  int mm, dd, yy;
+  sscanf(utcDate, "%2d%2d%2d", &mm, &dd, &yy);
+  struct tm t = {};
+
+  t.tm_mon = mm - 1; // Zero-based index month
+  t.tm_mday = dd - 1; // Previous day
+  t.tm_year = yy + 100; // 1900 + 100 + 26
+  mktime(&t); // Normalizes time (modulo)
+
+  // Create new string formatting
+  char logPath[40]; 
+  snprintf(logPath, sizeof(logPath), "/%02d%02d%02d_SignalLogger.csv",t.tm_mon+1, t.tm_mday, t.tm_year-100);
+
+  return SD_MMC.exists(logPath);
 }

@@ -22,6 +22,7 @@ extern bool sd_mounted;
 bool sdlog_init(void);
 
 // Append one row + CRC and verify by reading back last row
-bool sdlog_append(int rssi, int rsrp, int rsrq, int sinr, double lat, double lng, int batVoltage, const char* utcTime, const char* device_id );
+bool sdlog_append(int rssi, int rsrp, int rsrq, int sinr, double lat, double lng, int batVoltage, const char* utcTime, const char* device_id, bool GPSValid);
 
+bool checkPrevFile(const char* utcTime);
 #endif
